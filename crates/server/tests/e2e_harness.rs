@@ -32,14 +32,21 @@ impl LspChild {
         I: IntoIterator<Item = (&'static str, &'static str)>,
     {
         let mut cmd = Command::new(BIN);
-        cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
         for (k, v) in envs {
             cmd.env(k, v);
         }
         let mut child = cmd.spawn().expect("spawn js-sem-highlight");
         let stdin = child.stdin.take().expect("stdin");
         let stdout = BufReader::new(child.stdout.take().expect("stdout"));
-        Self { child, stdin, stdout, next_id: 1 }
+        Self {
+            child,
+            stdin,
+            stdout,
+            next_id: 1,
+        }
     }
 
     /// `true` si el child sigue vivo. Para 7.7 verificamos que un panic en
@@ -80,7 +87,9 @@ impl LspChild {
     fn write_message(&mut self, msg: &Value) {
         let body = serde_json::to_string(msg).expect("serialize");
         let header = format!("Content-Length: {}\r\n\r\n", body.len());
-        self.stdin.write_all(header.as_bytes()).expect("write header");
+        self.stdin
+            .write_all(header.as_bytes())
+            .expect("write header");
         self.stdin.write_all(body.as_bytes()).expect("write body");
         self.stdin.flush().expect("flush");
     }
@@ -112,7 +121,9 @@ impl LspChild {
         loop {
             match self.child.try_wait() {
                 Ok(Some(_)) => return,
-                Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
+                Ok(None) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(20))
+                }
                 _ => {
                     let _ = self.child.kill();
                     return;
@@ -162,7 +173,10 @@ fn e2e_initialize_open_semantic_tokens_close_shutdown_exit() {
     let mut c = LspChild::spawn();
 
     let init = c.send_request("initialize", initialize_request());
-    assert!(init.get("result").is_some(), "initialize should succeed: {init}");
+    assert!(
+        init.get("result").is_some(),
+        "initialize should succeed: {init}"
+    );
     let result = &init["result"];
     let caps = &result["capabilities"];
     assert!(caps.get("semanticTokensProvider").is_some());
@@ -171,7 +185,9 @@ fn e2e_initialize_open_semantic_tokens_close_shutdown_exit() {
     let legend = &caps["semanticTokensProvider"]["legend"];
     let types = legend["tokenTypes"].as_array().expect("tokenTypes array");
     assert_eq!(types.len(), 21, "21 token types expected");
-    let modifiers = legend["tokenModifiers"].as_array().expect("tokenModifiers array");
+    let modifiers = legend["tokenModifiers"]
+        .as_array()
+        .expect("tokenModifiers array");
     assert_eq!(modifiers.len(), 11, "11 token modifiers expected");
 
     c.send_notification("initialized", json!({}));
@@ -187,7 +203,10 @@ fn e2e_initialize_open_semantic_tokens_close_shutdown_exit() {
     );
     assert!(tokens.get("result").is_some(), "tokens response: {tokens}");
     let data = tokens["result"]["data"].as_array().expect("data array");
-    assert!(!data.is_empty(), "should produce some tokens for `const x = 42;`");
+    assert!(
+        !data.is_empty(),
+        "should produce some tokens for `const x = 42;`"
+    );
 
     c.send_notification(
         "textDocument/didClose",
@@ -205,7 +224,10 @@ fn e2e_pre_initialize_request_is_rejected() {
         "textDocument/semanticTokens/full",
         json!({ "textDocument": { "uri": "file:///x.js" } }),
     );
-    assert!(resp.get("error").is_some(), "expected error before init: {resp}");
+    assert!(
+        resp.get("error").is_some(),
+        "expected error before init: {resp}"
+    );
 
     // Cleanup forzado.
     c.shutdown_and_exit();
@@ -219,7 +241,10 @@ fn e2e_initialize_under_200ms_smoke_test() {
     let elapsed = start.elapsed();
     // Genérico: incluye spawn del proceso + carga del binario + initialize.
     // En CI compartido puede ser lento; usamos 2s como límite suave.
-    assert!(elapsed < Duration::from_secs(2), "initialize too slow: {elapsed:?}");
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "initialize too slow: {elapsed:?}"
+    );
     c.shutdown_and_exit();
 }
 
@@ -277,8 +302,13 @@ fn e2e_no_unused_vars_disabled_via_config() {
         json!({ "textDocument": { "uri": "file:///off.js" } }),
     );
     let items = resp["result"]["items"].as_array().expect("items array");
-    let has_unused = items.iter().any(|d| d["code"].as_str() == Some("no-unused-vars"));
-    assert!(!has_unused, "no-unused-vars should be silent when off: {items:?}");
+    let has_unused = items
+        .iter()
+        .any(|d| d["code"].as_str() == Some("no-unused-vars"));
+    assert!(
+        !has_unused,
+        "no-unused-vars should be silent when off: {items:?}"
+    );
 
     c.shutdown_and_exit();
 }
@@ -367,7 +397,10 @@ fn e2e_rule_panic_returns_internal_error_without_killing_server() {
     assert_eq!(code, -32603, "JSON-RPC InternalError = -32603");
 
     // Crítico: el servidor debe seguir vivo y responder a requests subsecuentes.
-    assert!(c.is_alive(), "server should not have crashed after rule panic");
+    assert!(
+        c.is_alive(),
+        "server should not have crashed after rule panic"
+    );
 
     // El mensaje no debe filtrar el backtrace al cliente. Solo debería ser
     // "Internal error" o equivalente, sin la cadena del panic.
@@ -431,12 +464,18 @@ fn e2e_semantic_tokens_full_delta_returns_proper_delta() {
     if let Some(error) = delta.get("error") {
         panic!("delta returned error: {error}");
     }
-    assert!(delta.get("result").is_some(), "expected result, got: {delta}");
+    assert!(
+        delta.get("result").is_some(),
+        "expected result, got: {delta}"
+    );
 
     // El result debe tener resultId Y, o bien un campo `edits` (delta), o bien
     // un campo `data` (degradación a full).
     let result = &delta["result"];
-    assert!(result["resultId"].is_string(), "expected resultId in delta result");
+    assert!(
+        result["resultId"].is_string(),
+        "expected resultId in delta result"
+    );
     assert!(
         result.get("edits").is_some() || result.get("data").is_some(),
         "expected `edits` or `data` in delta result, got: {result}"
@@ -489,7 +528,10 @@ fn e2e_initialize_advertises_save_capability() {
     );
 
     let save = &sync["save"];
-    assert!(save.is_object(), "save should be a SaveOptions object: {save}");
+    assert!(
+        save.is_object(),
+        "save should be a SaveOptions object: {save}"
+    );
     assert_eq!(
         save["includeText"].as_bool(),
         Some(false),
@@ -515,7 +557,10 @@ fn e2e_did_change_invalidates_token_cache() {
         json!({ "textDocument": { "uri": "file:///edit.js" } }),
     );
     let result_id_first = first["result"]["resultId"].as_str().map(str::to_string);
-    assert!(result_id_first.is_some(), "first response should have resultId");
+    assert!(
+        result_id_first.is_some(),
+        "first response should have resultId"
+    );
 
     // Edit: reemplazar `1` por `42` (1 char → 2 chars).
     c.send_notification(
@@ -538,7 +583,10 @@ fn e2e_did_change_invalidates_token_cache() {
     );
     let result_id_second = second["result"]["resultId"].as_str().map(str::to_string);
     assert!(result_id_second.is_some());
-    assert_ne!(result_id_first, result_id_second, "resultId should change after edit");
+    assert_ne!(
+        result_id_first, result_id_second,
+        "resultId should change after edit"
+    );
 
     c.shutdown_and_exit();
 }

@@ -35,7 +35,10 @@ pub fn lsp_position_to_byte(rope: &Rope, position: Position) -> Result<usize, Of
         }
         let units = ch.len_utf16() as u32;
         if utf16_remaining < units {
-            return Err(OffsetError::CharacterOutOfRange(position.character, position.line));
+            return Err(OffsetError::CharacterOutOfRange(
+                position.character,
+                position.line,
+            ));
         }
         utf16_remaining -= units;
         char_offset += 1;
@@ -76,7 +79,15 @@ pub fn lsp_range_to_byte_range(rope: &Rope, range: Range) -> Result<(usize, usiz
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     fn rope(s: &str) -> Rope {
@@ -86,7 +97,10 @@ mod tests {
     #[test]
     fn ascii_round_trip() {
         let r = rope("hola\nmundo\n");
-        let pos = Position { line: 1, character: 3 };
+        let pos = Position {
+            line: 1,
+            character: 3,
+        };
         let byte = lsp_position_to_byte(&r, pos).expect("convert");
         let back = byte_to_lsp_position(&r, byte).expect("convert back");
         assert_eq!(back, pos);
@@ -96,7 +110,10 @@ mod tests {
     fn supplementary_plane_uses_two_utf16_units() {
         // 🌍 (U+1F30D) ocupa 2 code units en UTF-16, 1 char en Rust, 4 bytes UTF-8.
         let r = rope("a🌍b");
-        let pos_after_emoji = Position { line: 0, character: 3 };
+        let pos_after_emoji = Position {
+            line: 0,
+            character: 3,
+        };
         let byte = lsp_position_to_byte(&r, pos_after_emoji).expect("convert");
         // 'a' (1 byte) + '🌍' (4 bytes) = 5
         assert_eq!(byte, 5);
@@ -105,7 +122,10 @@ mod tests {
     #[test]
     fn position_at_end_of_line_is_valid() {
         let r = rope("abc\ndef\n");
-        let pos = Position { line: 0, character: 3 };
+        let pos = Position {
+            line: 0,
+            character: 3,
+        };
         let byte = lsp_position_to_byte(&r, pos).expect("end of line");
         assert_eq!(byte, 3);
     }
@@ -113,7 +133,10 @@ mod tests {
     #[test]
     fn line_out_of_range() {
         let r = rope("only one line");
-        let pos = Position { line: 5, character: 0 };
+        let pos = Position {
+            line: 5,
+            character: 0,
+        };
         assert!(matches!(
             lsp_position_to_byte(&r, pos),
             Err(OffsetError::LineOutOfRange(5, _))
@@ -124,8 +147,14 @@ mod tests {
     fn range_conversion() {
         let r = rope("const x = 1;");
         let range = Range {
-            start: Position { line: 0, character: 6 },
-            end: Position { line: 0, character: 7 },
+            start: Position {
+                line: 0,
+                character: 6,
+            },
+            end: Position {
+                line: 0,
+                character: 7,
+            },
         };
         assert_eq!(lsp_range_to_byte_range(&r, range).expect("range"), (6, 7));
     }

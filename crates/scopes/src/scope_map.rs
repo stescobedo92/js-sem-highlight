@@ -54,7 +54,9 @@ impl ScopeMap {
     /// Encuentra la referencia cuyo rango contiene el byte offset dado.
     #[must_use]
     pub fn reference_at(&self, byte: u32) -> Option<&ClassifiedReference> {
-        self.references.iter().find(|r| r.range.contains_offset(byte))
+        self.references
+            .iter()
+            .find(|r| r.range.contains_offset(byte))
     }
 }
 
@@ -87,7 +89,11 @@ pub fn analyze(
     let semantic_ret = SemanticBuilder::new().build(&parser_ret.program);
     cancellation.check()?;
 
-    Ok(build_scope_map(&semantic_ret.semantic, source, cancellation)?)
+    Ok(build_scope_map(
+        &semantic_ret.semantic,
+        source,
+        cancellation,
+    )?)
 }
 
 fn build_scope_map(
@@ -115,7 +121,8 @@ fn build_scope_map(
         let role = role_from_symbol_flags(flags, is_function_scope);
         let resolved_refs = &symbols.resolved_references[symbol_id];
 
-        let is_unused = compute_is_unused(&name, role, flags, resolved_refs.is_empty(), source, span);
+        let is_unused =
+            compute_is_unused(&name, role, flags, resolved_refs.is_empty(), source, span);
         let is_const = flags.is_const_variable();
 
         bindings.push(IdentifierBinding {
@@ -149,7 +156,10 @@ fn build_scope_map(
     bindings.sort_by_key(|b| b.range.start);
     references.sort_by_key(|r| r.range.start);
 
-    Ok(ScopeMap { bindings, references })
+    Ok(ScopeMap {
+        bindings,
+        references,
+    })
 }
 
 /// Convierte `SymbolFlags` de oxc al `IdentifierRole` de nuestro modelo.
@@ -254,7 +264,15 @@ fn classify_reference(
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     fn analyze_js(source: &str) -> ScopeMap {
@@ -290,14 +308,22 @@ mod tests {
     #[test]
     fn underscore_prefix_param_not_unused() {
         let m = analyze_js("function f(_unused, used) { return used; }");
-        let unused = m.bindings.iter().find(|b| b.name == "_unused").expect("_unused");
+        let unused = m
+            .bindings
+            .iter()
+            .find(|b| b.name == "_unused")
+            .expect("_unused");
         assert!(!unused.is_unused, "_unused should be exempt");
     }
 
     #[test]
     fn function_declaration_classified() {
         let m = analyze_js("function greet(name) { return name; }");
-        let greet = m.bindings.iter().find(|b| b.name == "greet").expect("greet");
+        let greet = m
+            .bindings
+            .iter()
+            .find(|b| b.name == "greet")
+            .expect("greet");
         assert_eq!(greet.role, IdentifierRole::Function);
     }
 
@@ -325,7 +351,11 @@ mod tests {
     #[test]
     fn typescript_enum_classified() {
         let m = analyze_ts("enum Color { Red, Green }");
-        let color = m.bindings.iter().find(|b| b.name == "Color").expect("Color");
+        let color = m
+            .bindings
+            .iter()
+            .find(|b| b.name == "Color")
+            .expect("Color");
         assert_eq!(color.role, IdentifierRole::Enum);
     }
 
@@ -348,7 +378,11 @@ mod tests {
     #[test]
     fn import_classified_as_imported_binding() {
         let m = analyze_js("import { useState } from 'react'; useState(0);");
-        let b = m.bindings.iter().find(|b| b.name == "useState").expect("useState");
+        let b = m
+            .bindings
+            .iter()
+            .find(|b| b.name == "useState")
+            .expect("useState");
         assert_eq!(b.role, IdentifierRole::ImportedBinding);
     }
 

@@ -29,12 +29,12 @@ impl Default for Config {
         enabled_modifiers.insert("declaration".into());
         Self {
             max_file_size_bytes: DEFAULT_MAX_FILE_SIZE_KB * 1024,
-        rules: SeverityConfig::empty(),
-        ignore_patterns: vec![
-            "**/node_modules/**".into(),
-            "**/dist/**".into(),
-            "**/*.min.js".into(),
-        ],
+            rules: SeverityConfig::empty(),
+            ignore_patterns: vec![
+                "**/node_modules/**".into(),
+                "**/dist/**".into(),
+                "**/*.min.js".into(),
+            ],
             enabled_modifiers,
         }
     }
@@ -91,14 +91,25 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     #[test]
     fn defaults_match_spec() {
         let cfg = Config::default();
         assert_eq!(cfg.max_file_size_bytes, 512 * 1024);
-        assert!(cfg.ignore_patterns.iter().any(|p| p.contains("node_modules")));
+        assert!(cfg
+            .ignore_patterns
+            .iter()
+            .any(|p| p.contains("node_modules")));
     }
 
     #[test]
@@ -111,7 +122,8 @@ mod tests {
         let cfg = Config::from_init_options(Some(value));
         assert_eq!(cfg.max_file_size_bytes, 2048 * 1024);
         assert_eq!(
-            cfg.rules.effective("no-unused-vars", js_sem_rules::RuleSeverity::Hint),
+            cfg.rules
+                .effective("no-unused-vars", js_sem_rules::RuleSeverity::Hint),
             js_sem_rules::RuleSeverity::Warning
         );
         assert_eq!(cfg.ignore_patterns, vec!["**/build/**".to_string()]);

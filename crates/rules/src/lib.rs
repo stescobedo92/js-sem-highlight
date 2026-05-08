@@ -14,11 +14,11 @@ mod severity;
 
 pub use context::{dedupe_emissions, AnalysisContext, RuleDiagnostic, RuleEmission, TokenModifier};
 pub use registry::{RegistrationError, RuleRegistry};
+#[cfg(debug_assertions)]
+pub use rules::PanickingRule;
 pub use rules::{
     ConsistentReturnTypes, NoDeprecatedApi, NoFloatingPromises, NoUnusedVars, PreferConst,
 };
-#[cfg(debug_assertions)]
-pub use rules::PanickingRule;
 pub use severity::{RuleSeverity, SeverityConfig};
 
 /// Trait que toda regla debe implementar.

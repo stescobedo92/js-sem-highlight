@@ -51,7 +51,10 @@ pub struct RuleDiagnostic {
 /// Una emisión: token modifier o diagnóstico.
 #[derive(Debug, Clone)]
 pub enum RuleEmission {
-    TokenModifier { range: Range, modifier: TokenModifier },
+    TokenModifier {
+        range: Range,
+        modifier: TokenModifier,
+    },
     Diagnostic(RuleDiagnostic),
 }
 
@@ -106,15 +109,29 @@ pub fn dedupe_emissions(emissions: Vec<RuleEmission>) -> Vec<RuleEmission> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
     use tower_lsp::lsp_types::Position;
 
     fn diag(code: &str, msg: &str) -> RuleEmission {
         RuleEmission::Diagnostic(RuleDiagnostic {
             range: Range {
-                start: Position { line: 0, character: 0 },
-                end: Position { line: 0, character: 1 },
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: 0,
+                    character: 1,
+                },
             },
             severity: DiagnosticSeverity::HINT,
             tags: vec![],
@@ -134,8 +151,14 @@ mod tests {
     fn dedupe_preserves_token_modifiers() {
         let modifier = RuleEmission::TokenModifier {
             range: Range {
-                start: Position { line: 0, character: 0 },
-                end: Position { line: 0, character: 1 },
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: 0,
+                    character: 1,
+                },
             },
             modifier: TokenModifier::Unused,
         };

@@ -12,4 +12,4 @@ pub mod tokens;
 pub use document::{Document, DocumentError};
 pub use language::{Language, LanguageRegistry};
 pub use offset::{lsp_range_to_byte_range, OffsetError};
-pub use tokens::{TokenSpan, tokens_in_range};
+pub use tokens::{tokens_in_range, TokenSpan};

@@ -17,17 +17,19 @@ use tower_lsp::lsp_types::{
     DocumentDiagnosticReportResult, FullDocumentDiagnosticReport, InitializeParams,
     InitializeResult, InitializedParams, MessageType, RelatedFullDocumentDiagnosticReport,
     SaveOptions, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams,
-    SemanticTokensFullDeltaResult, SemanticTokensFullOptions,
-    SemanticTokensOptions, SemanticTokensParams, SemanticTokensRangeParams,
-    SemanticTokensRangeResult, SemanticTokensResult, SemanticTokensServerCapabilities,
-    ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url, WorkDoneProgressOptions,
+    SemanticTokensFullDeltaResult, SemanticTokensFullOptions, SemanticTokensOptions,
+    SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
+    SemanticTokensResult, SemanticTokensServerCapabilities, ServerCapabilities, ServerInfo,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncSaveOptions, Url, WorkDoneProgressOptions,
 };
 use tower_lsp::{Client, LanguageServer};
 
 use crate::cache::{CachedTokenSet, ResultIdGenerator};
 use crate::config::Config;
-use crate::tokens::{encode_tokens, legend, token_type_index, EmittedToken, Modifiers, TokenModifierLegend};
+use crate::tokens::{
+    encode_tokens, legend, token_type_index, EmittedToken, Modifiers, TokenModifierLegend,
+};
 
 /// Estado por documento mantenido por el servidor.
 struct DocumentState {
@@ -61,9 +63,7 @@ impl Backend {
 
     /// Reanaliza un documento abriendo scopes (síncrono — ejecutado bajo
     /// `tokio::task::spawn_blocking` por el caller).
-    fn run_scope_analysis(
-        document: &Document,
-    ) -> Result<ScopeMap, js_sem_scopes::AnalyzeError> {
+    fn run_scope_analysis(document: &Document) -> Result<ScopeMap, js_sem_scopes::AnalyzeError> {
         let source = document.rope.to_string();
         analyze(&source, document.language, &CancellationToken::new())
     }
@@ -132,7 +132,12 @@ impl LanguageServer for Backend {
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let cfg = self.config.read().await;
-        let path = params.text_document.uri.to_file_path().ok().map(PathBuf::from);
+        let path = params
+            .text_document
+            .uri
+            .to_file_path()
+            .ok()
+            .map(PathBuf::from);
         let language_id = params.text_document.language_id.as_str();
         match Document::open_with_detection(
             path.as_deref(),
@@ -145,7 +150,11 @@ impl LanguageServer for Backend {
                 let scope_map = Backend::run_scope_analysis(&document).ok().map(Arc::new);
                 self.documents.insert(
                     params.text_document.uri,
-                    DocumentState { document, scope_map, cached_tokens: None },
+                    DocumentState {
+                        document,
+                        scope_map,
+                        cached_tokens: None,
+                    },
                 );
             }
             Err(DocumentError::FileTooLarge { actual, limit }) => {
@@ -180,7 +189,9 @@ impl LanguageServer for Backend {
         }
         // Re-analizar scopes (simplificado: sin debounce real, lo haremos en
         // un job task del servidor cuando integre la timer-task).
-        let new_map = Backend::run_scope_analysis(&entry.document).ok().map(Arc::new);
+        let new_map = Backend::run_scope_analysis(&entry.document)
+            .ok()
+            .map(Arc::new);
         entry.scope_map = new_map;
         // Invalidar cache de tokens.
         entry.cached_tokens = None;
@@ -297,9 +308,11 @@ impl LanguageServer for Backend {
             .into_iter()
             .filter(|t| {
                 let after_start = t.line > params.range.start.line
-                    || (t.line == params.range.start.line && t.character >= params.range.start.character);
+                    || (t.line == params.range.start.line
+                        && t.character >= params.range.start.character);
                 let before_end = t.line < params.range.end.line
-                    || (t.line == params.range.end.line && t.character < params.range.end.character);
+                    || (t.line == params.range.end.line
+                        && t.character < params.range.end.character);
                 after_start && before_end
             })
             .collect();
@@ -373,7 +386,11 @@ impl LanguageServer for Backend {
                         source: Some("js-sem".into()),
                         message: d.message,
                         related_information: None,
-                        tags: if d.tags.is_empty() { None } else { Some(d.tags) },
+                        tags: if d.tags.is_empty() {
+                            None
+                        } else {
+                            Some(d.tags)
+                        },
                         data: None,
                     });
                 }
@@ -412,10 +429,7 @@ impl LanguageServer for Backend {
 ///   number, regex, comment, operator).
 /// - Cruza con el `ScopeMap` para clasificar identificadores y agregar
 ///   modifiers (`declaration`, `readonly`, `defaultLibrary`, `unused`).
-fn compute_semantic_tokens(
-    document: &Document,
-    scope_map: Option<&ScopeMap>,
-) -> Vec<EmittedToken> {
+fn compute_semantic_tokens(document: &Document, scope_map: Option<&ScopeMap>) -> Vec<EmittedToken> {
     use js_sem_parsing::tokens_in_range;
     use tower_lsp::lsp_types::{Position, Range};
 
@@ -426,7 +440,10 @@ fn compute_semantic_tokens(
         0
     };
     let full_range = Range {
-        start: Position { line: 0, character: 0 },
+        start: Position {
+            line: 0,
+            character: 0,
+        },
         end: Position {
             line: u32::try_from(total_lines.saturating_sub(1)).unwrap_or(u32::MAX),
             character: u32::try_from(last_line_chars).unwrap_or(u32::MAX),
@@ -444,9 +461,13 @@ fn compute_semantic_tokens(
     let source = document.rope.to_string();
 
     for span in spans {
-        let Some((token_type, modifiers)) =
-            map_tree_sitter_kind(&span.kind, &source, span.byte_start, span.byte_end, scope_map)
-        else {
+        let Some((token_type, modifiers)) = map_tree_sitter_kind(
+            &span.kind,
+            &source,
+            span.byte_start,
+            span.byte_end,
+            scope_map,
+        ) else {
             continue;
         };
         let length = u32::try_from(span.byte_end - span.byte_start).unwrap_or(u32::MAX);
@@ -482,18 +503,22 @@ fn map_tree_sitter_kind(
 
     let token_type = match kind {
         // Keywords
-        "const" | "let" | "var" | "function" | "class" | "interface" | "type" | "enum"
-        | "if" | "else" | "for" | "while" | "do" | "return" | "break" | "continue"
-        | "throw" | "try" | "catch" | "finally" | "switch" | "case" | "default"
-        | "import" | "export" | "from" | "as" | "new" | "delete" | "typeof" | "instanceof"
-        | "in" | "of" | "void" | "yield" | "async" | "await" | "this" | "super"
-        | "true" | "false" | "null" | "undefined" => T::Keyword,
+        "const" | "let" | "var" | "function" | "class" | "interface" | "type" | "enum" | "if"
+        | "else" | "for" | "while" | "do" | "return" | "break" | "continue" | "throw" | "try"
+        | "catch" | "finally" | "switch" | "case" | "default" | "import" | "export" | "from"
+        | "as" | "new" | "delete" | "typeof" | "instanceof" | "in" | "of" | "void" | "yield"
+        | "async" | "await" | "this" | "super" | "true" | "false" | "null" | "undefined" => {
+            T::Keyword
+        }
         "string" | "string_fragment" | "template_string" => T::String,
         "number" => T::Number,
         "regex" | "regex_pattern" | "regex_flags" => T::Regexp,
         "comment" => T::Comment,
         "decorator" => T::Decorator,
-        "identifier" | "property_identifier" | "shorthand_property_identifier" | "type_identifier" => {
+        "identifier"
+        | "property_identifier"
+        | "shorthand_property_identifier"
+        | "type_identifier" => {
             // Si tenemos scope-map, intentar clasificar por byte offset.
             if let Some(map) = scope_map {
                 let byte_u32 = u32::try_from(byte_start).unwrap_or(u32::MAX);
@@ -548,4 +573,3 @@ fn binding_modifiers(binding: &js_sem_scopes::IdentifierBinding) -> Modifiers {
     }
     m
 }
-

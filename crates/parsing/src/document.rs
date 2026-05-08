@@ -181,7 +181,15 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
     use tower_lsp::lsp_types::{Position, Range};
 
@@ -213,8 +221,14 @@ mod tests {
         let mut doc = Document::open(Language::JavaScript, 1, "const x = 1;", LIMIT).expect("open");
         let changes = vec![TextDocumentContentChangeEvent {
             range: Some(Range {
-                start: Position { line: 0, character: 10 },
-                end: Position { line: 0, character: 11 },
+                start: Position {
+                    line: 0,
+                    character: 10,
+                },
+                end: Position {
+                    line: 0,
+                    character: 11,
+                },
             }),
             range_length: None,
             text: "42".to_string(),

@@ -20,8 +20,14 @@ use crate::VisualLintRule;
 /// suficiente para tests donde el texto es ASCII.
 fn ascii_range(start: u32, end: u32) -> Range {
     Range {
-        start: Position { line: 0, character: start },
-        end: Position { line: 0, character: end },
+        start: Position {
+            line: 0,
+            character: start,
+        },
+        end: Position {
+            line: 0,
+            character: end,
+        },
     }
 }
 
@@ -58,7 +64,10 @@ impl VisualLintRule for NoUnusedVars {
                 range,
                 severity: DiagnosticSeverity::HINT,
                 tags: vec![DiagnosticTag::UNNECESSARY],
-                message: format!("'{}' is declared but its value is never read.", binding.name),
+                message: format!(
+                    "'{}' is declared but its value is never read.",
+                    binding.name
+                ),
                 code: self.id().to_string(),
             }));
         }
@@ -170,7 +179,10 @@ impl VisualLintRule for PreferConst {
                 range,
                 severity: DiagnosticSeverity::HINT,
                 tags: vec![],
-                message: format!("'{}' is never reassigned. Use 'const' instead.", binding.name),
+                message: format!(
+                    "'{}' is never reassigned. Use 'const' instead.",
+                    binding.name
+                ),
                 code: self.id().to_string(),
             }));
         }
@@ -225,7 +237,15 @@ impl VisualLintRule for ConsistentReturnTypes {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
     use js_sem_scopes::{analyze, CancellationToken};
 
@@ -240,23 +260,37 @@ mod tests {
     #[test]
     fn no_unused_vars_emits_for_unused_const() {
         let source = "const a = 1;";
-        let map = analyze(source, js_sem_parsing::Language::JavaScript, &CancellationToken::new())
-            .expect("analyze");
+        let map = analyze(
+            source,
+            js_sem_parsing::Language::JavaScript,
+            &CancellationToken::new(),
+        )
+        .expect("analyze");
         let ctx = ctx_for(source, &map);
         let emissions = NoUnusedVars.check(&ctx);
         // Un binding unused → un TokenModifier + un Diagnostic.
         assert_eq!(emissions.len(), 2);
+        assert!(emissions.iter().any(|e| matches!(
+            e,
+            RuleEmission::TokenModifier {
+                modifier: TokenModifier::Unused,
+                ..
+            }
+        )));
         assert!(emissions
             .iter()
-            .any(|e| matches!(e, RuleEmission::TokenModifier { modifier: TokenModifier::Unused, .. })));
-        assert!(emissions.iter().any(|e| matches!(e, RuleEmission::Diagnostic(_))));
+            .any(|e| matches!(e, RuleEmission::Diagnostic(_))));
     }
 
     #[test]
     fn no_unused_vars_silent_when_used() {
         let source = "const a = 1; console.log(a);";
-        let map = analyze(source, js_sem_parsing::Language::JavaScript, &CancellationToken::new())
-            .expect("analyze");
+        let map = analyze(
+            source,
+            js_sem_parsing::Language::JavaScript,
+            &CancellationToken::new(),
+        )
+        .expect("analyze");
         let ctx = ctx_for(source, &map);
         assert!(NoUnusedVars.check(&ctx).is_empty());
     }
@@ -274,8 +308,12 @@ mod tests {
     #[test]
     fn prefer_const_silent_for_actual_const() {
         let source = "const a = 1; console.log(a);";
-        let map = analyze(source, js_sem_parsing::Language::JavaScript, &CancellationToken::new())
-            .expect("analyze");
+        let map = analyze(
+            source,
+            js_sem_parsing::Language::JavaScript,
+            &CancellationToken::new(),
+        )
+        .expect("analyze");
         let ctx = ctx_for(source, &map);
         assert!(PreferConst.check(&ctx).is_empty());
     }

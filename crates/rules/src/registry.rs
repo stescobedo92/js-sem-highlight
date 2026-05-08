@@ -49,10 +49,7 @@ impl RuleRegistry {
     /// Registra una nueva regla. Retorna `Err` si:
     /// - El id ya está registrado.
     /// - El registry está locked (post-`initialized`).
-    pub fn try_register(
-        &mut self,
-        rule: Box<dyn VisualLintRule>,
-    ) -> Result<(), RegistrationError> {
+    pub fn try_register(&mut self, rule: Box<dyn VisualLintRule>) -> Result<(), RegistrationError> {
         if self.locked {
             return Err(RegistrationError::Locked);
         }
@@ -105,7 +102,15 @@ impl RuleRegistry {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
     use crate::context::{AnalysisContext, RuleEmission};
     use crate::severity::RuleSeverity;
@@ -145,7 +150,9 @@ mod tests {
         r.try_register(Box::new(DummyRule("foo"))).expect("ok");
         r.lock();
         assert!(r.is_locked());
-        let err = r.try_register(Box::new(DummyRule("bar"))).expect_err("locked");
+        let err = r
+            .try_register(Box::new(DummyRule("bar")))
+            .expect_err("locked");
         assert!(matches!(err, RegistrationError::Locked));
     }
 

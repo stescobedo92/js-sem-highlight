@@ -20,9 +20,15 @@ fn fixture_js(n_lines: usize) -> String {
         match i % 5 {
             0 => out.push_str(&format!("const k_{i} = {i};\n")),
             1 => out.push_str(&format!("let v_{i} = k_{} + 1;\n", i.saturating_sub(1))),
-            2 => out.push_str(&format!("function f_{i}(a, b) {{ return a + b + v_{i}; }}\n")),
+            2 => out.push_str(&format!(
+                "function f_{i}(a, b) {{ return a + b + v_{i}; }}\n"
+            )),
             3 => out.push_str(&format!("const r_{i} = f_{i}(k_{i}, v_{i});\n")),
-            _ => out.push_str(&format!("console.log(r_{}, k_{});\n", i.saturating_sub(1), i)),
+            _ => out.push_str(&format!(
+                "console.log(r_{}, k_{});\n",
+                i.saturating_sub(1),
+                i
+            )),
         }
     }
     out
@@ -52,7 +58,8 @@ fn bench_analyze(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(source.len() as u64));
         group.bench_with_input(BenchmarkId::from_parameter(lines), &source, |b, source| {
             b.iter(|| {
-                let map = analyze(black_box(source), Language::JavaScript, &token).expect("analyze");
+                let map =
+                    analyze(black_box(source), Language::JavaScript, &token).expect("analyze");
                 black_box(map);
             });
         });
@@ -73,8 +80,14 @@ fn bench_incremental_edit(c: &mut Criterion) {
             // Edit barato: insertar un espacio en línea 100 col 0.
             let change = TextDocumentContentChangeEvent {
                 range: Some(Range {
-                    start: Position { line: 100, character: 0 },
-                    end: Position { line: 100, character: 0 },
+                    start: Position {
+                        line: 100,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: 100,
+                        character: 0,
+                    },
                 }),
                 range_length: None,
                 text: " ".into(),

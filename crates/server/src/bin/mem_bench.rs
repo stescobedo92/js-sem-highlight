@@ -62,8 +62,8 @@ fn main() {
     for seed in 0..n_docs {
         let source = make_source(seed, 1_000); // ~1k LOC por documento
         total_source_bytes += source.len();
-        let doc = Document::open(Language::JavaScript, 1, &source, LIMIT_BYTES)
-            .expect("open document");
+        let doc =
+            Document::open(Language::JavaScript, 1, &source, LIMIT_BYTES).expect("open document");
         // Forzar análisis de scopes para capturar la memoria de oxc.
         let _scope_map = analyze(&source, Language::JavaScript, &cancel).expect("analyze");
         docs.push(doc);

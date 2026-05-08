@@ -49,14 +49,17 @@ impl Language {
     /// al `languageId` LSP).
     #[must_use]
     pub fn from_path(path: &Path) -> Option<Self> {
-        path.extension().and_then(|e| e.to_str()).and_then(Self::from_extension)
+        path.extension()
+            .and_then(|e| e.to_str())
+            .and_then(Self::from_extension)
     }
 
     /// Combina detección por path y por `languageId` siguiendo el orden del
     /// spec: extensión primero, luego `languageId`.
     #[must_use]
     pub fn detect(path: Option<&Path>, language_id: Option<&str>) -> Option<Self> {
-        path.and_then(Self::from_path).or_else(|| language_id.and_then(Self::from_language_id))
+        path.and_then(Self::from_path)
+            .or_else(|| language_id.and_then(Self::from_language_id))
     }
 }
 
@@ -104,7 +107,15 @@ pub fn has_node_shebang(source: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     #[test]
@@ -127,10 +138,22 @@ mod tests {
 
     #[test]
     fn from_language_id_known() {
-        assert_eq!(Language::from_language_id("javascript"), Some(Language::JavaScript));
-        assert_eq!(Language::from_language_id("javascriptreact"), Some(Language::Jsx));
-        assert_eq!(Language::from_language_id("typescript"), Some(Language::TypeScript));
-        assert_eq!(Language::from_language_id("typescriptreact"), Some(Language::Tsx));
+        assert_eq!(
+            Language::from_language_id("javascript"),
+            Some(Language::JavaScript)
+        );
+        assert_eq!(
+            Language::from_language_id("javascriptreact"),
+            Some(Language::Jsx)
+        );
+        assert_eq!(
+            Language::from_language_id("typescript"),
+            Some(Language::TypeScript)
+        );
+        assert_eq!(
+            Language::from_language_id("typescriptreact"),
+            Some(Language::Tsx)
+        );
     }
 
     #[test]

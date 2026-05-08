@@ -69,7 +69,15 @@ impl SeverityConfig {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     #[test]
@@ -89,7 +97,10 @@ mod tests {
     #[test]
     fn config_default_falls_back() {
         let cfg = SeverityConfig::empty();
-        assert_eq!(cfg.effective("any-rule", RuleSeverity::Hint), RuleSeverity::Hint);
+        assert_eq!(
+            cfg.effective("any-rule", RuleSeverity::Hint),
+            RuleSeverity::Hint
+        );
     }
 
     #[test]

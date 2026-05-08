@@ -293,7 +293,15 @@ pub fn encode_tokens(tokens: &[EmittedToken]) -> Vec<SemanticToken> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::missing_const_for_fn, clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_lossless)]
+    #![allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::panic,
+        clippy::missing_const_for_fn,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_lossless
+    )]
     use super::*;
 
     #[test]
@@ -399,10 +407,25 @@ mod tests {
 
     #[test]
     fn role_to_token_type_mapping() {
-        assert_eq!(token_type_index(IdentifierRole::Parameter), TokenTypeLegend::Parameter);
-        assert_eq!(token_type_index(IdentifierRole::Class), TokenTypeLegend::Class);
-        assert_eq!(token_type_index(IdentifierRole::Function), TokenTypeLegend::Function);
-        assert_eq!(token_type_index(IdentifierRole::TypeAlias), TokenTypeLegend::Type);
-        assert_eq!(token_type_index(IdentifierRole::EnumMember), TokenTypeLegend::EnumMember);
+        assert_eq!(
+            token_type_index(IdentifierRole::Parameter),
+            TokenTypeLegend::Parameter
+        );
+        assert_eq!(
+            token_type_index(IdentifierRole::Class),
+            TokenTypeLegend::Class
+        );
+        assert_eq!(
+            token_type_index(IdentifierRole::Function),
+            TokenTypeLegend::Function
+        );
+        assert_eq!(
+            token_type_index(IdentifierRole::TypeAlias),
+            TokenTypeLegend::Type
+        );
+        assert_eq!(
+            token_type_index(IdentifierRole::EnumMember),
+            TokenTypeLegend::EnumMember
+        );
     }
 }
