@@ -1,0 +1,68 @@
+name: VS Code Marketplace
+
+on:
+  push:
+    tags:
+      - 'vscode-v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    env:
+      RELEASE_VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: client
+        run: npx tsc -p .
+
+      - name: Download server binaries
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The matching server tag is the same prefix without `vscode-`.
+          SERVER_TAG="${RELEASE_VERSION#vscode-}"
+          mkdir -p client/server
+          for slug in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+            mkdir -p "client/server/${slug}"
+            ext=""
+            archive="js-sem-highlight-${slug}.tar.gz"
+            if [ "$slug" = "win32-x64" ]; then
+              archive="js-sem-highlight-${slug}.zip"
+              ext=".exe"
+            fi
+            gh release download "$SERVER_TAG" -p "$archive" -D /tmp
+            if [ "$slug" = "win32-x64" ]; then
+              unzip -o "/tmp/$archive" -d /tmp/extract
+              cp "/tmp/extract/js-sem-highlight-${slug}/js-sem-highlight${ext}" "client/server/${slug}/"
+            else
+              tar -xzf "/tmp/$archive" -C /tmp
+              cp "/tmp/js-sem-highlight-${slug}/js-sem-highlight${ext}" "client/server/${slug}/"
+              chmod +x "client/server/${slug}/js-sem-highlight"
+            fi
+          done
+
+      - name: Package vsix
+        working-directory: client
+        run: npx vsce package
+
+      - name: Publish to Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        working-directory: client
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish --packagePath js-sem-highlight-*.vsix
