@@ -1,0 +1,21 @@
+[package]
+name = "js-sem-rules"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "js_sem_rules"
+path = "src/lib.rs"
+
+[dependencies]
+js-sem-parsing = { path = "../parsing" }
+js-sem-scopes = { path = "../scopes" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tower-lsp = { workspace = true }
+
+[lints]
+workspace = true
