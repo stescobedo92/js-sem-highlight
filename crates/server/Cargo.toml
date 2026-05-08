@@ -1,0 +1,39 @@
+[package]
+name = "js-sem-highlight"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "js-sem-highlight"
+path = "src/main.rs"
+
+[[bin]]
+name = "mem-bench"
+path = "src/bin/mem_bench.rs"
+required-features = ["dhat-heap"]
+
+[features]
+default = []
+# Activa heap profiling con dhat para el binario `mem-bench`. NUNCA debe
+# habilitarse en releases de producción: cambia el allocator global y la
+# overhead es ~2x.
+dhat-heap = ["dep:dhat"]
+
+[dependencies]
+js-sem-lsp = { path = "../lsp" }
+js-sem-parsing = { path = "../parsing" }
+js-sem-scopes = { path = "../scopes" }
+tokio = { workspace = true }
+tower-lsp = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+dhat = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
