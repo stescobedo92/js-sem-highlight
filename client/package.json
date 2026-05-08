@@ -1,0 +1,102 @@
+{
+  "name": "js-sem-highlight",
+  "displayName": "JavaScript Semantic Highlight",
+  "description": "Semantic syntax highlighting and visual lint hints for JavaScript, TypeScript, JSX, and TSX, powered by a Rust LSP server.",
+  "version": "0.1.1",
+  "publisher": "stescobedo",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "contributes": {
+    "languages": [
+      { "id": "javascript", "extensions": [".js", ".mjs", ".cjs"] },
+      { "id": "javascriptreact", "extensions": [".jsx"] },
+      { "id": "typescript", "extensions": [".ts", ".mts", ".cts"] },
+      { "id": "typescriptreact", "extensions": [".tsx"] }
+    ],
+    "commands": [
+      {
+        "command": "js-sem.applyRecommendedColors",
+        "title": "JS Sem: Apply recommended semantic colors",
+        "category": "JS Sem"
+      },
+      {
+        "command": "js-sem.restartServer",
+        "title": "JS Sem: Restart server",
+        "category": "JS Sem"
+      }
+    ],
+    "configuration": {
+      "title": "JavaScript Semantic Highlight",
+      "properties": {
+        "js-sem.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the JS Semantic Highlight server."
+        },
+        "js-sem.rules": {
+          "type": "object",
+          "default": {},
+          "description": "Per-rule severity overrides. Keys are rule ids (e.g. 'no-unused-vars'); values are 'off' | 'hint' | 'warning' | 'error'.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["off", "hint", "warning", "error"]
+          }
+        },
+        "js-sem.ignore": {
+          "type": "array",
+          "default": ["**/node_modules/**", "**/dist/**", "**/*.min.js"],
+          "items": { "type": "string" },
+          "description": "Glob patterns to skip (no semantic tokens nor diagnostics)."
+        },
+        "js-sem.maxFileSizeKb": {
+          "type": "integer",
+          "default": 512,
+          "minimum": 0,
+          "maximum": 8192,
+          "description": "Maximum file size (KB) the server will process. Larger files return empty tokens."
+        },
+        "js-sem.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace LSP communication (for debugging)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -p . --watch",
+    "package": "vsce package",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.0",
+    "glob": "^10.4.5",
+    "mocha": "^10.7.3",
+    "typescript": "^5.5.4"
+  }
+}
