@@ -1,0 +1,84 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/server",
+    "crates/parsing",
+    "crates/scopes",
+    "crates/rules",
+    "crates/lsp",
+]
+
+[workspace.package]
+version = "0.1.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/stescobedo/js-semantic-highlight"
+rust-version = "1.78"
+
+[workspace.dependencies]
+tokio = { version = "1.40", features = ["macros", "rt-multi-thread", "io-std", "sync", "time"] }
+tower-lsp = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dashmap = "6.1"
+ropey = "1.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+thiserror = "1.0"
+anyhow = "1.0"
+
+tree-sitter = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+
+oxc_parser = "0.34"
+oxc_semantic = "0.34"
+oxc_span = "0.34"
+oxc_ast = "0.34"
+oxc_allocator = "0.34"
+
+proptest = "1.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+dhat = "0.3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+# pedantic/nursery son SUGERENCIAS (warn) — útiles localmente al revisar,
+# pero NO bloquean CI. El gate de CI usa solo lints `error`-level definidos
+# explícitamente abajo (correctness + suspicious). Esto es la postura común
+# en proyectos Rust que adoptan pedantic; convertirlos en `-D warnings`
+# rompe builds por estilo, no por bugs.
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# Deny levels — auténticos errores de corrección.
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+# `unwrap_used`/`expect_used`/`panic` denegados en código de producción, pero
+# permitidos explícitamente en módulos `#[cfg(test)] mod tests` mediante
+# `#![allow(...)]` per-module. Aquí los dejamos en `warn` a nivel workspace
+# para que `cargo clippy --workspace --all-targets -- -D warnings` solo
+# convierta a error lo que es genuinamente código de producción (los tests
+# tienen sus propios overrides locales cuando los necesitan).
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+opt-level = 3
+debug = false
+panic = "abort"
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
+debug = true
