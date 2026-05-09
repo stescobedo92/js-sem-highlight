@@ -4,6 +4,14 @@
 //! Cubre los `Scenario`s de `lsp-server-runtime/spec.md` y
 //! `semantic-token-emitter/spec.md` que requieren ver el wire format real.
 
+#![allow(
+    clippy::expect_used,
+    clippy::must_use_candidate,
+    clippy::needless_pass_by_value,
+    clippy::panic,
+    clippy::semicolon_if_nothing_returned
+)]
+
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::{Duration, Instant};

@@ -1,5 +1,5 @@
 //! Tests de regresión: snippets que históricamente rompen highlighters basados
-//! en regex (TextMate) y que tree-sitter debería parsear sin perder estructura.
+//! en regex (`TextMate`) y que tree-sitter debería parsear sin perder estructura.
 //!
 //! Cada caso verifica dos invariantes:
 //! 1. El parser produce un árbol no vacío (no panic, no None).
@@ -8,6 +8,8 @@
 //!
 //! Cubre el `Scenario: Código incompleto durante la edición` del
 //! `js-parsing-pipeline/spec.md`.
+
+#![allow(clippy::expect_used)]
 
 use js_sem_parsing::{Document, Language};
 
@@ -90,13 +92,13 @@ fn ts_satisfies_operator() {
 #[test]
 fn ts_decorators_stage_3() {
     let doc = parse_ts(
-        r#"
+        r"
         function logged(_target: any, _ctx: ClassMethodDecoratorContext) {}
         class Foo {
             @logged
             bar() {}
         }
-        "#,
+        ",
     );
     assert!(!doc.tree().root_node().has_error());
 }
@@ -137,11 +139,11 @@ fn deeply_nested_template_literals() {
 fn missing_semicolons_via_asi() {
     // Automatic Semicolon Insertion: rompe muchos parsers no-Spec-compliant.
     let doc = parse_js(
-        r#"
+        r"
         const a = 1
         const b = 2
         const c = a + b
-        "#,
+        ",
     );
     assert!(!doc.tree().root_node().has_error());
 }

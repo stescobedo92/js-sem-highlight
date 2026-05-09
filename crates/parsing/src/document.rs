@@ -81,8 +81,7 @@ impl Document {
             })
             .ok_or_else(|| {
                 DocumentError::LanguageNotSupported(
-                    path.map(|p| p.display().to_string())
-                        .unwrap_or_else(|| "<no-path>".into()),
+                    path.map_or_else(|| "<no-path>".into(), |p| p.display().to_string()),
                 )
             })?;
         Self::open(language, version, text, max_file_size_bytes)
@@ -90,7 +89,7 @@ impl Document {
 
     /// Acceso de solo lectura al árbol tree-sitter actual.
     #[must_use]
-    pub fn tree(&self) -> &Tree {
+    pub const fn tree(&self) -> &Tree {
         &self.tree
     }
 

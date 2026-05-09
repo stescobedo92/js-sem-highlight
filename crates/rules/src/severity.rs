@@ -6,19 +6,14 @@ use serde::Deserialize;
 use tower_lsp::lsp_types::DiagnosticSeverity;
 
 /// Severidad configurable por el usuario para una regla individual.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RuleSeverity {
     Off,
+    #[default]
     Hint,
     Warning,
     Error,
-}
-
-impl Default for RuleSeverity {
-    fn default() -> Self {
-        Self::Hint
-    }
 }
 
 impl RuleSeverity {

@@ -16,7 +16,7 @@ pub struct TokenSpan {
 }
 
 /// Devuelve los tokens terminales (nodos hoja con texto) que intersectan el
-/// rango LSP solicitado, ordenados ascendentemente por byte_start.
+/// rango LSP solicitado, ordenados ascendentemente por `byte_start`.
 pub fn tokens_in_range(
     tree: &Tree,
     rope: &Rope,

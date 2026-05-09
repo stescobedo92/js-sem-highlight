@@ -215,13 +215,15 @@ pub fn legend() -> SemanticTokensLegend {
 
 /// Mapea un `IdentifierRole` al `TokenTypeLegend` correspondiente.
 #[must_use]
-pub fn token_type_index(role: IdentifierRole) -> TokenTypeLegend {
+pub const fn token_type_index(role: IdentifierRole) -> TokenTypeLegend {
     match role {
         IdentifierRole::Parameter => TokenTypeLegend::Parameter,
-        IdentifierRole::LocalVariable | IdentifierRole::LocalConstant => TokenTypeLegend::Variable,
-        IdentifierRole::ImportedBinding | IdentifierRole::ExportedBinding => {
-            TokenTypeLegend::Variable
-        }
+        IdentifierRole::LocalVariable
+        | IdentifierRole::LocalConstant
+        | IdentifierRole::ImportedBinding
+        | IdentifierRole::ExportedBinding
+        | IdentifierRole::Global
+        | IdentifierRole::Unresolved => TokenTypeLegend::Variable,
         IdentifierRole::Function => TokenTypeLegend::Function,
         IdentifierRole::Class => TokenTypeLegend::Class,
         IdentifierRole::TypeAlias => TokenTypeLegend::Type,
@@ -230,7 +232,6 @@ pub fn token_type_index(role: IdentifierRole) -> TokenTypeLegend {
         IdentifierRole::EnumMember => TokenTypeLegend::EnumMember,
         IdentifierRole::Property => TokenTypeLegend::Property,
         IdentifierRole::Method => TokenTypeLegend::Method,
-        IdentifierRole::Global | IdentifierRole::Unresolved => TokenTypeLegend::Variable,
     }
 }
 
@@ -330,7 +331,7 @@ mod tests {
     fn modifier_bits_are_unique() {
         let mut accum = 0u32;
         for m in TokenModifierLegend::all() {
-            assert_eq!(accum & m.bit(), 0, "duplicate bit at {:?}", m);
+            assert_eq!(accum & m.bit(), 0, "duplicate bit at {m:?}");
             accum |= m.bit();
         }
     }

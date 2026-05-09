@@ -66,7 +66,7 @@ pub enum RuleEmission {
 #[must_use]
 pub fn dedupe_emissions(emissions: Vec<RuleEmission>) -> Vec<RuleEmission> {
     /// Tupla "Hash-able" derivada del `RuleDiagnostic`. Range y
-    /// DiagnosticSeverity de tower_lsp no son `Hash`, así que los aplastamos
+    /// `DiagnosticSeverity` de `tower_lsp` no son `Hash`, así que los aplastamos
     /// a primitivos.
     type Key = (u32, u32, u32, u32, i32, String, String);
 

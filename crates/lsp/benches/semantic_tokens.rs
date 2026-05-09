@@ -4,6 +4,10 @@
 //! con `cargo bench -p js-sem-lsp` y producen reportes HTML en
 //! `target/criterion/`.
 
+#![allow(clippy::expect_used)]
+
+use std::fmt::Write as _;
+
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use js_sem_parsing::{Document, Language};
 use js_sem_scopes::{analyze, CancellationToken};
@@ -18,17 +22,21 @@ fn fixture_js(n_lines: usize) -> String {
     let mut out = String::with_capacity(n_lines * 60);
     for i in 0..n_lines {
         match i % 5 {
-            0 => out.push_str(&format!("const k_{i} = {i};\n")),
-            1 => out.push_str(&format!("let v_{i} = k_{} + 1;\n", i.saturating_sub(1))),
-            2 => out.push_str(&format!(
-                "function f_{i}(a, b) {{ return a + b + v_{i}; }}\n"
-            )),
-            3 => out.push_str(&format!("const r_{i} = f_{i}(k_{i}, v_{i});\n")),
-            _ => out.push_str(&format!(
-                "console.log(r_{}, k_{});\n",
-                i.saturating_sub(1),
-                i
-            )),
+            0 => {
+                let _ = writeln!(out, "const k_{i} = {i};");
+            }
+            1 => {
+                let _ = writeln!(out, "let v_{i} = k_{} + 1;", i.saturating_sub(1));
+            }
+            2 => {
+                let _ = writeln!(out, "function f_{i}(a, b) {{ return a + b + v_{i}; }}");
+            }
+            3 => {
+                let _ = writeln!(out, "const r_{i} = f_{i}(k_{i}, v_{i});");
+            }
+            _ => {
+                let _ = writeln!(out, "console.log(r_{}, k_{});", i.saturating_sub(1), i);
+            }
         }
     }
     out

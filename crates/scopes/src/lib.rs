@@ -1,7 +1,7 @@
 //! Resolución de scopes y clasificación de identificadores.
 //!
 //! Construye un `ScopeMap` desde una fuente JS/TS/JSX/TSX usando `oxc_parser`
-//! + `oxc_semantic` y traduce los símbolos/referencias de oxc a un modelo
+//! y `oxc_semantic`, y traduce los símbolos/referencias de oxc a un modelo
 //! `IdentifierRole` consumido por el resto del servidor.
 //!
 //! Cubre el contrato de `specs/scope-resolver/spec.md`.

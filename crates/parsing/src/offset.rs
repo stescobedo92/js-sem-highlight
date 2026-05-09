@@ -33,7 +33,7 @@ pub fn lsp_position_to_byte(rope: &Rope, position: Position) -> Result<usize, Of
         if utf16_remaining == 0 {
             break;
         }
-        let units = ch.len_utf16() as u32;
+        let units = u32::try_from(ch.len_utf16()).unwrap_or(u32::MAX);
         if utf16_remaining < units {
             return Err(OffsetError::CharacterOutOfRange(
                 position.character,
@@ -55,14 +55,12 @@ pub fn byte_to_lsp_position(rope: &Rope, byte: usize) -> Result<Position, Offset
     let line_slice = rope.line(line);
 
     let mut utf16: u32 = 0;
-    let mut consumed = 0usize;
     let target = char_idx - line_start_char;
-    for ch in line_slice.chars() {
+    for (consumed, ch) in line_slice.chars().enumerate() {
         if consumed == target {
             break;
         }
-        utf16 += ch.len_utf16() as u32;
-        consumed += 1;
+        utf16 += u32::try_from(ch.len_utf16()).unwrap_or(u32::MAX);
     }
     Ok(Position {
         line: u32::try_from(line).unwrap_or(u32::MAX),

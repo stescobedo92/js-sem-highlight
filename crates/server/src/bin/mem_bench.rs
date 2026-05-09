@@ -3,7 +3,7 @@
 //!
 //! Cumple el target del design: "memoria por documento abierto < 4× tamaño
 //! de la fuente en bytes". Producirá un `dhat-heap.json` que se puede abrir
-//! en https://nnethercote.github.io/dh_view/dh_view.html para inspección
+//! en <https://nnethercote.github.io/dh_view/dh_view.html> para inspección
 //! detallada de allocations.
 //!
 //! Uso:
@@ -16,7 +16,9 @@
 //! Requiere la feature `dhat-heap` (gated en Cargo.toml).
 
 #![cfg(feature = "dhat-heap")]
+#![allow(clippy::cast_precision_loss, clippy::expect_used)]
 
+use std::fmt::Write as _;
 use std::time::Instant;
 
 use js_sem_parsing::{Document, Language};
@@ -34,13 +36,22 @@ fn make_source(seed: usize, n_lines: usize) -> String {
     let mut s = String::with_capacity(n_lines * 60);
     for i in 0..n_lines {
         match i % 4 {
-            0 => s.push_str(&format!("const k_{seed}_{i} = {i};\n")),
-            1 => s.push_str(&format!(
-                "function f_{seed}_{i}(a) {{ return a + k_{seed}_{}; }}\n",
-                i.saturating_sub(1)
-            )),
-            2 => s.push_str(&format!("let v_{seed}_{i} = f_{seed}_{i}({i});\n", i = i)),
-            _ => s.push_str(&format!("console.log(v_{seed}_{i});\n")),
+            0 => {
+                let _ = writeln!(s, "const k_{seed}_{i} = {i};");
+            }
+            1 => {
+                let _ = writeln!(
+                    s,
+                    "function f_{seed}_{i}(a) {{ return a + k_{seed}_{}; }}",
+                    i.saturating_sub(1)
+                );
+            }
+            2 => {
+                let _ = writeln!(s, "let v_{seed}_{i} = f_{seed}_{i}({i});");
+            }
+            _ => {
+                let _ = writeln!(s, "console.log(v_{seed}_{i});");
+            }
         }
     }
     s

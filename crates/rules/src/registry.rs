@@ -1,7 +1,7 @@
 //! Registry de reglas.
 //!
 //! Encapsula:
-//! - Almacenamiento por id (HashMap)
+//! - Almacenamiento por id (`HashMap`)
 //! - Validación de id duplicado (fail-fast en arranque)
 //! - Lock post-`initialized` (rechaza nuevas reglas en runtime)
 //!
@@ -77,14 +77,14 @@ impl RuleRegistry {
     /// Encuentra una regla por id.
     #[must_use]
     pub fn find(&self, id: &str) -> Option<&dyn VisualLintRule> {
-        self.rules.get(id).map(|r| r.as_ref())
+        self.rules.get(id).map(std::convert::AsRef::as_ref)
     }
 
     /// Itera reglas en orden de inserción.
     pub fn iter(&self) -> impl Iterator<Item = &dyn VisualLintRule> {
         self.order
             .iter()
-            .filter_map(|id| self.rules.get(id).map(|r| r.as_ref()))
+            .filter_map(|id| self.rules.get(id).map(std::convert::AsRef::as_ref))
     }
 
     /// Cantidad de reglas registradas.

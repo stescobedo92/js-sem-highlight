@@ -61,7 +61,7 @@ impl ScopeMap {
 }
 
 /// Mapea `Language` del crate `parsing` a `SourceType` de oxc.
-fn source_type_for(language: Language) -> SourceType {
+const fn source_type_for(language: Language) -> SourceType {
     match language {
         Language::JavaScript => SourceType::mjs(),
         Language::Jsx => SourceType::jsx(),
@@ -89,11 +89,7 @@ pub fn analyze(
     let semantic_ret = SemanticBuilder::new().build(&parser_ret.program);
     cancellation.check()?;
 
-    Ok(build_scope_map(
-        &semantic_ret.semantic,
-        source,
-        cancellation,
-    )?)
+    build_scope_map(&semantic_ret.semantic, source, cancellation)
 }
 
 fn build_scope_map(
@@ -189,8 +185,6 @@ fn role_from_symbol_flags(flags: SymbolFlags, is_function_scope: bool) -> Identi
         // y los marcamos via `intersects(SymbolFlags::FunctionScopedVariable)`
         // adicionalmente con la heurística de span (más adelante).
         IdentifierRole::Parameter
-    } else if flags.is_variable() {
-        IdentifierRole::LocalVariable
     } else {
         IdentifierRole::LocalVariable
     }
@@ -201,7 +195,7 @@ fn role_from_symbol_flags(flags: SymbolFlags, is_function_scope: bool) -> Identi
 /// Aplica las cuatro excepciones del spec:
 /// 1. Parámetros con prefijo `_`.
 /// 2. Parámetros antes del último parámetro usado (no implementado a nivel
-///    de SymbolTable; requiere visitor sintáctico — TODO en grupo siguiente).
+///    de `SymbolTable`; requiere visitor sintáctico — TODO en grupo siguiente).
 /// 3. Type-only bindings (TypeScript).
 /// 4. Catch bindings.
 fn compute_is_unused(

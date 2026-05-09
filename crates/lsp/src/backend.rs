@@ -1,7 +1,6 @@
 //! `Backend`: la implementación de `LanguageServer` que orquesta todo.
 
 use std::panic::AssertUnwindSafe;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -133,12 +132,7 @@ impl LanguageServer for Backend {
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let cfg = self.config.read().await;
-        let path = params
-            .text_document
-            .uri
-            .to_file_path()
-            .ok()
-            .map(PathBuf::from);
+        let path = params.text_document.uri.to_file_path().ok();
         let language_id = params.text_document.language_id.as_str();
         match Document::open_with_detection(
             path.as_deref(),
@@ -148,7 +142,7 @@ impl LanguageServer for Backend {
             cfg.max_file_size_bytes,
         ) {
             Ok(document) => {
-                let scope_map = Backend::run_scope_analysis(&document).ok().map(Arc::new);
+                let scope_map = Self::run_scope_analysis(&document).ok().map(Arc::new);
                 self.documents.insert(
                     params.text_document.uri,
                     DocumentState {
@@ -174,12 +168,9 @@ impl LanguageServer for Backend {
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri;
-        let mut entry = match self.documents.get_mut(&uri) {
-            Some(e) => e,
-            None => {
-                tracing::warn!(uri = %uri, "did_change for unknown document");
-                return;
-            }
+        let Some(mut entry) = self.documents.get_mut(&uri) else {
+            tracing::warn!(uri = %uri, "did_change for unknown document");
+            return;
         };
         if let Err(err) = entry
             .document
@@ -190,9 +181,7 @@ impl LanguageServer for Backend {
         }
         // Re-analizar scopes (simplificado: sin debounce real, lo haremos en
         // un job task del servidor cuando integre la timer-task).
-        let new_map = Backend::run_scope_analysis(&entry.document)
-            .ok()
-            .map(Arc::new);
+        let new_map = Self::run_scope_analysis(&entry.document).ok().map(Arc::new);
         entry.scope_map = new_map;
         // Invalidar cache de tokens.
         entry.cached_tokens = None;
@@ -229,17 +218,19 @@ impl LanguageServer for Backend {
         params: SemanticTokensParams,
     ) -> LspResult<Option<SemanticTokensResult>> {
         let uri = params.text_document.uri;
-        let mut entry = match self.documents.get_mut(&uri) {
-            Some(e) => e,
-            None => return Ok(None),
+        let (result_id, encoded) = {
+            let Some(mut entry) = self.documents.get_mut(&uri) else {
+                return Ok(None);
+            };
+            let tokens = compute_semantic_tokens(&entry.document, entry.scope_map.as_deref());
+            let encoded = encode_tokens(&tokens);
+            let result_id = self.id_gen.next_id();
+            entry.cached_tokens = Some(CachedTokenSet {
+                result_id: result_id.clone(),
+                tokens: encoded.clone(),
+            });
+            (result_id, encoded)
         };
-        let tokens = compute_semantic_tokens(&entry.document, entry.scope_map.as_deref());
-        let encoded = encode_tokens(&tokens);
-        let result_id = self.id_gen.next_id();
-        entry.cached_tokens = Some(CachedTokenSet {
-            result_id: result_id.clone(),
-            tokens: encoded.clone(),
-        });
         Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
             result_id: Some(result_id),
             data: encoded,
@@ -251,46 +242,51 @@ impl LanguageServer for Backend {
         params: SemanticTokensDeltaParams,
     ) -> LspResult<Option<SemanticTokensFullDeltaResult>> {
         let uri = params.text_document.uri;
-        let mut entry = match self.documents.get_mut(&uri) {
-            Some(e) => e,
-            None => return Ok(None),
-        };
+        let response = {
+            let Some(mut entry) = self.documents.get_mut(&uri) else {
+                return Ok(None);
+            };
 
-        // Calcular tokens actuales y nueva resultId siempre.
-        let current = encode_tokens(&compute_semantic_tokens(
-            &entry.document,
-            entry.scope_map.as_deref(),
-        ));
-        let new_result_id = self.id_gen.next_id();
+            // Calcular tokens actuales y nueva resultId siempre.
+            let current = encode_tokens(&compute_semantic_tokens(
+                &entry.document,
+                entry.scope_map.as_deref(),
+            ));
+            let new_result_id = self.id_gen.next_id();
 
-        // Si el cliente trajo un previousResultId que conocemos, intentar
-        // computar el delta. Si no, degradar a respuesta full.
-        let response = match entry.cached_tokens.as_ref() {
-            Some(prev) if prev.result_id == params.previous_result_id => {
-                if let Some(edit) = crate::cache::compute_delta_edit(&prev.tokens, &current) {
-                    SemanticTokensFullDeltaResult::TokensDelta(SemanticTokensDelta {
-                        result_id: Some(new_result_id.clone()),
-                        edits: vec![edit],
-                    })
-                } else {
-                    // Sin cambios reales: delta vacío.
-                    SemanticTokensFullDeltaResult::TokensDelta(SemanticTokensDelta {
-                        result_id: Some(new_result_id.clone()),
-                        edits: vec![],
-                    })
+            // Si el cliente trajo un previousResultId que conocemos, intentar
+            // computar el delta. Si no, degradar a respuesta full.
+            let response = match entry.cached_tokens.as_ref() {
+                Some(prev) if prev.result_id == params.previous_result_id => {
+                    crate::cache::compute_delta_edit(&prev.tokens, &current).map_or_else(
+                        || {
+                            SemanticTokensFullDeltaResult::TokensDelta(SemanticTokensDelta {
+                                result_id: Some(new_result_id.clone()),
+                                edits: vec![],
+                            })
+                        },
+                        |edit| {
+                            SemanticTokensFullDeltaResult::TokensDelta(SemanticTokensDelta {
+                                result_id: Some(new_result_id.clone()),
+                                edits: vec![edit],
+                            })
+                        },
+                    )
                 }
-            }
-            _ => SemanticTokensFullDeltaResult::Tokens(SemanticTokens {
-                result_id: Some(new_result_id.clone()),
-                data: current.clone(),
-            }),
-        };
+                _ => SemanticTokensFullDeltaResult::Tokens(SemanticTokens {
+                    result_id: Some(new_result_id.clone()),
+                    data: current.clone(),
+                }),
+            };
 
-        // Actualizar cache con el set actual y el nuevo id.
-        entry.cached_tokens = Some(CachedTokenSet {
-            result_id: new_result_id,
-            tokens: current,
-        });
+            // Actualizar cache con el set actual y el nuevo id.
+            entry.cached_tokens = Some(CachedTokenSet {
+                result_id: new_result_id,
+                tokens: current,
+            });
+
+            response
+        };
 
         Ok(Some(response))
     }
@@ -300,11 +296,12 @@ impl LanguageServer for Backend {
         params: SemanticTokensRangeParams,
     ) -> LspResult<Option<SemanticTokensRangeResult>> {
         let uri = params.text_document.uri;
-        let entry = match self.documents.get(&uri) {
-            Some(e) => e,
-            None => return Ok(None),
+        let all = {
+            let Some(entry) = self.documents.get(&uri) else {
+                return Ok(None);
+            };
+            compute_semantic_tokens(&entry.document, entry.scope_map.as_deref())
         };
-        let all = compute_semantic_tokens(&entry.document, entry.scope_map.as_deref());
         let in_range: Vec<EmittedToken> = all
             .into_iter()
             .filter(|t| {
@@ -332,32 +329,37 @@ impl LanguageServer for Backend {
         params: DocumentDiagnosticParams,
     ) -> LspResult<DocumentDiagnosticReportResult> {
         let uri = params.text_document.uri;
-        let entry = match self.documents.get(&uri) {
-            Some(e) => e,
-            None => {
-                return Ok(DocumentDiagnosticReportResult::Report(
-                    DocumentDiagnosticReport::Full(RelatedFullDocumentDiagnosticReport {
-                        related_documents: None,
-                        full_document_diagnostic_report: FullDocumentDiagnosticReport {
-                            result_id: None,
-                            items: vec![],
-                        },
-                    }),
-                ));
-            }
+        let Some((source, scope_map, rope, filename)) = ({
+            self.documents.get(&uri).map(|entry| {
+                (
+                    entry.document.rope.to_string(),
+                    entry.scope_map.clone(),
+                    entry.document.rope.clone(),
+                    uri.path().to_string(),
+                )
+            })
+        }) else {
+            return Ok(DocumentDiagnosticReportResult::Report(
+                DocumentDiagnosticReport::Full(RelatedFullDocumentDiagnosticReport {
+                    related_documents: None,
+                    full_document_diagnostic_report: FullDocumentDiagnosticReport {
+                        result_id: None,
+                        items: vec![],
+                    },
+                }),
+            ));
         };
 
-        let cfg = self.config.read().await;
-        let source = entry.document.rope.to_string();
+        let rules_cfg = self.config.read().await.rules.clone();
         let ctx = AnalysisContext {
             source: &source,
-            scope_map: entry.scope_map.as_deref(),
-            filename: uri.path(),
+            scope_map: scope_map.as_deref(),
+            filename: &filename,
         };
 
         let mut diagnostics = Vec::new();
         for rule in self.rules.iter() {
-            let severity = cfg.rules.effective(rule.id(), rule.default_severity());
+            let severity = rules_cfg.effective(rule.id(), rule.default_severity());
             if severity.is_off() {
                 continue;
             }
@@ -379,7 +381,7 @@ impl LanguageServer for Backend {
             };
             for emission in emissions {
                 if let RuleEmission::Diagnostic(d) = emission {
-                    let range = normalize_rule_range(&entry.document, d.range);
+                    let range = normalize_rule_range(&rope, d.range);
                     diagnostics.push(tower_lsp::lsp_types::Diagnostic {
                         range,
                         severity: target_severity,
@@ -420,7 +422,7 @@ impl LanguageServer for Backend {
     }
 }
 
-fn normalize_rule_range(document: &Document, range: Range) -> Range {
+fn normalize_rule_range(rope: &ropey::Rope, range: Range) -> Range {
     if range.start.line != 0 || range.end.line != 0 {
         return range;
     }
@@ -431,14 +433,14 @@ fn normalize_rule_range(document: &Document, range: Range) -> Range {
     let Ok(end_byte) = usize::try_from(range.end.character) else {
         return range;
     };
-    if start_byte > end_byte || end_byte > document.rope.len_bytes() {
+    if start_byte > end_byte || end_byte > rope.len_bytes() {
         return range;
     }
 
-    let Ok(start) = byte_to_lsp_position(&document.rope, start_byte) else {
+    let Ok(start) = byte_to_lsp_position(rope, start_byte) else {
         return range;
     };
-    let Ok(end) = byte_to_lsp_position(&document.rope, end_byte) else {
+    let Ok(end) = byte_to_lsp_position(rope, end_byte) else {
         return range;
     };
     Range { start, end }
@@ -574,16 +576,18 @@ fn map_tree_sitter_kind(
 
 /// Extrae un mensaje legible del payload de un panic.
 fn panic_message(payload: &Box<dyn std::any::Any + Send>) -> String {
-    if let Some(s) = payload.downcast_ref::<&'static str>() {
-        (*s).to_string()
-    } else if let Some(s) = payload.downcast_ref::<String>() {
-        s.clone()
-    } else {
-        "<panic with non-string payload>".to_string()
-    }
+    payload.downcast_ref::<&'static str>().map_or_else(
+        || {
+            payload.downcast_ref::<String>().map_or_else(
+                || "<panic with non-string payload>".to_string(),
+                Clone::clone,
+            )
+        },
+        |s| (*s).to_string(),
+    )
 }
 
-fn binding_modifiers(binding: &js_sem_scopes::IdentifierBinding) -> Modifiers {
+const fn binding_modifiers(binding: &js_sem_scopes::IdentifierBinding) -> Modifiers {
     let mut m = Modifiers::new().with(TokenModifierLegend::Declaration);
     if binding.is_const {
         m = m.with(TokenModifierLegend::Readonly);

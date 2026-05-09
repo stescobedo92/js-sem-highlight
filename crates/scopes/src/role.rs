@@ -72,6 +72,7 @@ impl IdentifierRole {
 
 /// Información de una declaración (binding) en el código fuente.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct IdentifierBinding {
     /// Nombre del símbolo.
     pub name: String,
@@ -85,7 +86,7 @@ pub struct IdentifierBinding {
     pub is_const: bool,
     /// `true` si la función fue declarada con `async`.
     pub is_async: bool,
-    /// `true` si el símbolo ha sido marcado como `@deprecated` (JSDoc adyacente).
+    /// `true` si el símbolo ha sido marcado como `@deprecated` (`JSDoc` adyacente).
     pub is_deprecated: bool,
 }
 

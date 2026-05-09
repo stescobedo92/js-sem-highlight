@@ -18,7 +18,7 @@ use crate::VisualLintRule;
 /// El LSP layer reemplazará esto con coordenadas reales del documento; por
 /// ahora producimos un rango con `character` = byte offset, lo cual es
 /// suficiente para tests donde el texto es ASCII.
-fn ascii_range(start: u32, end: u32) -> Range {
+const fn ascii_range(start: u32, end: u32) -> Range {
     Range {
         start: Position {
             line: 0,
@@ -208,6 +208,7 @@ impl VisualLintRule for PanickingRule {
     fn default_severity(&self) -> RuleSeverity {
         RuleSeverity::Hint
     }
+    #[allow(clippy::panic)]
     fn check(&self, _ctx: &AnalysisContext<'_>) -> Vec<RuleEmission> {
         panic!("PanickingRule: deliberate panic from a test-only rule");
     }

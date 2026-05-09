@@ -9,6 +9,8 @@
 //! que `byte_to_lsp_position(lsp_position_to_byte(p)) == p` para cualquier
 //! posición válida.
 
+#![allow(clippy::expect_used)]
+
 use js_sem_parsing::offset::{byte_to_lsp_position, lsp_position_to_byte};
 use proptest::prelude::*;
 use ropey::Rope;
