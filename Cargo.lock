@@ -741,7 +741,7 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "js-sem-highlight"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "dhat",
@@ -757,7 +757,7 @@ dependencies = [
 
 [[package]]
 name = "js-sem-lsp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "dashmap 6.1.0",
@@ -776,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "js-sem-parsing"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proptest",
  "ropey",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "js-sem-rules"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "js-sem-parsing",
  "js-sem-scopes",
@@ -802,7 +802,7 @@ dependencies = [
 
 [[package]]
 name = "js-sem-scopes"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "js-sem-parsing",
  "oxc_allocator",

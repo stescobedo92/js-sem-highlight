@@ -5,6 +5,21 @@ All notable changes to **JS Semantic Highlight** are documented here.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.2 (2026-05-08)
+
+### Fixed
+- Semantic token emission now covers the full document instead of stopping
+  after the first parsed subtree. Multiline files now emit tokens for later
+  declarations such as `const unused = 42;`.
+- `no-unused-vars` diagnostics now report real LSP line/column ranges instead
+  of byte-offset placeholders on line 0.
+
+### Added
+- Regression coverage for multiline token traversal, `unused` semantic
+  modifiers, and multiline diagnostic ranges.
+- A `.vscodeignore` file to keep source maps, tests, sources, and old `.vsix`
+  files out of packaged extension builds.
+
 ## 0.1.1 (2026-05-08)
 
 ### Fixed

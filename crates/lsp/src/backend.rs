@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use dashmap::DashMap;
+use js_sem_parsing::offset::byte_to_lsp_position;
 use js_sem_parsing::{Document, DocumentError};
 use js_sem_rules::{default_registry, AnalysisContext, RuleEmission, RuleRegistry};
 use js_sem_scopes::{analyze, CancellationToken, ScopeMap};
@@ -15,7 +16,7 @@ use tower_lsp::lsp_types::{
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
     DidSaveTextDocumentParams, DocumentDiagnosticParams, DocumentDiagnosticReport,
     DocumentDiagnosticReportResult, FullDocumentDiagnosticReport, InitializeParams,
-    InitializeResult, InitializedParams, MessageType, RelatedFullDocumentDiagnosticReport,
+    InitializeResult, InitializedParams, MessageType, Range, RelatedFullDocumentDiagnosticReport,
     SaveOptions, SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaParams,
     SemanticTokensFullDeltaResult, SemanticTokensFullOptions, SemanticTokensOptions,
     SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
@@ -378,8 +379,9 @@ impl LanguageServer for Backend {
             };
             for emission in emissions {
                 if let RuleEmission::Diagnostic(d) = emission {
+                    let range = normalize_rule_range(&entry.document, d.range);
                     diagnostics.push(tower_lsp::lsp_types::Diagnostic {
-                        range: d.range,
+                        range,
                         severity: target_severity,
                         code: Some(tower_lsp::lsp_types::NumberOrString::String(d.code)),
                         code_description: None,
@@ -416,6 +418,30 @@ impl LanguageServer for Backend {
         self.documents.clear();
         Ok(())
     }
+}
+
+fn normalize_rule_range(document: &Document, range: Range) -> Range {
+    if range.start.line != 0 || range.end.line != 0 {
+        return range;
+    }
+
+    let Ok(start_byte) = usize::try_from(range.start.character) else {
+        return range;
+    };
+    let Ok(end_byte) = usize::try_from(range.end.character) else {
+        return range;
+    };
+    if start_byte > end_byte || end_byte > document.rope.len_bytes() {
+        return range;
+    }
+
+    let Ok(start) = byte_to_lsp_position(&document.rope, start_byte) else {
+        return range;
+    };
+    let Ok(end) = byte_to_lsp_position(&document.rope, end_byte) else {
+        return range;
+    };
+    Range { start, end }
 }
 
 // ============================================================================

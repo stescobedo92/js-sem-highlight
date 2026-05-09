@@ -2,7 +2,7 @@
   "name": "js-sem-highlight",
   "displayName": "JavaScript Semantic Highlight",
   "description": "Semantic syntax highlighting and visual lint hints for JavaScript, TypeScript, JSX, and TSX, powered by a Rust LSP server.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "stescobedo",
   "license": "MIT OR Apache-2.0",
   "engines": {

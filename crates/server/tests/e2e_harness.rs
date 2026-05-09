@@ -164,6 +164,75 @@ fn did_open_params(uri: &str, language_id: &str, text: &str) -> Value {
     })
 }
 
+#[derive(Debug)]
+struct DecodedSemanticToken {
+    text: String,
+    token_type: String,
+    modifiers: Vec<String>,
+}
+
+fn decode_semantic_tokens(
+    response: &Value,
+    legend: &Value,
+    source: &str,
+) -> Vec<DecodedSemanticToken> {
+    let data = response["result"]["data"].as_array().expect("data array");
+    let token_types = legend["tokenTypes"].as_array().expect("tokenTypes array");
+    let token_modifiers = legend["tokenModifiers"]
+        .as_array()
+        .expect("tokenModifiers array");
+    let lines: Vec<&str> = source.lines().collect();
+
+    let mut out = Vec::new();
+    let mut line = 0u64;
+    let mut character = 0u64;
+
+    for chunk in data.chunks_exact(5) {
+        let delta_line = chunk[0].as_u64().expect("deltaLine");
+        let delta_start = chunk[1].as_u64().expect("deltaStart");
+        let length = chunk[2].as_u64().expect("length");
+        let token_type_idx = chunk[3].as_u64().expect("tokenType");
+        let modifier_bits = chunk[4].as_u64().expect("modifiers");
+
+        line += delta_line;
+        if delta_line == 0 {
+            character += delta_start;
+        } else {
+            character = delta_start;
+        }
+
+        let line_text = lines
+            .get(usize::try_from(line).expect("line index"))
+            .expect("token line");
+        let start = usize::try_from(character).expect("character index");
+        let end = start + usize::try_from(length).expect("token length");
+        let text = line_text[start..end].to_string();
+        let token_type = token_types
+            .get(usize::try_from(token_type_idx).expect("token type index"))
+            .and_then(Value::as_str)
+            .expect("token type name")
+            .to_string();
+        let modifiers = token_modifiers
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, modifier)| {
+                if modifier_bits & (1u64 << idx) == 0 {
+                    return None;
+                }
+                modifier.as_str().map(str::to_string)
+            })
+            .collect();
+
+        out.push(DecodedSemanticToken {
+            text,
+            token_type,
+            modifiers,
+        });
+    }
+
+    out
+}
+
 // ============================================================================
 //   E2E tests
 // ============================================================================
@@ -367,6 +436,76 @@ fn e2e_jsx_tsx_languages_supported() {
     );
     let data = tokens["result"]["data"].as_array().expect("data");
     assert!(!data.is_empty(), "TSX should produce tokens");
+
+    c.shutdown_and_exit();
+}
+
+#[test]
+fn e2e_semantic_tokens_cover_multiline_unused_binding() {
+    let mut c = LspChild::spawn();
+    let init = c.send_request("initialize", initialize_request());
+    let legend = init["result"]["capabilities"]["semanticTokensProvider"]["legend"].clone();
+    c.send_notification("initialized", json!({}));
+
+    let source = "const greeting = \"hola\";\nlet counter = 0;\nconst unused = 42;\nfunction greet(name: string) {\n  return greeting;\n}\n";
+    c.send_notification(
+        "textDocument/didOpen",
+        did_open_params("file:///multiline.ts", "typescript", source),
+    );
+
+    let tokens = c.send_request(
+        "textDocument/semanticTokens/full",
+        json!({ "textDocument": { "uri": "file:///multiline.ts" } }),
+    );
+    let decoded = decode_semantic_tokens(&tokens, &legend, source);
+    let unused = decoded
+        .iter()
+        .find(|token| token.text == "unused")
+        .expect("unused binding should be emitted");
+
+    assert_eq!(unused.token_type, "variable");
+    assert!(unused.modifiers.iter().any(|m| m == "declaration"));
+    assert!(unused.modifiers.iter().any(|m| m == "readonly"));
+    assert!(unused.modifiers.iter().any(|m| m == "unused"));
+    assert!(
+        decoded.iter().any(|token| token.text == "counter"),
+        "token stream should continue past the first statement"
+    );
+
+    c.shutdown_and_exit();
+}
+
+#[test]
+fn e2e_unused_diagnostic_uses_real_multiline_range() {
+    let mut c = LspChild::spawn();
+    let _ = c.send_request("initialize", initialize_request());
+    c.send_notification("initialized", json!({}));
+
+    let source = "const greeting = \"hola\";\nlet counter = 0;\nconst unused = 42;\n";
+    c.send_notification(
+        "textDocument/didOpen",
+        did_open_params("file:///diagnostic-range.ts", "typescript", source),
+    );
+
+    let diagnostics = c.send_request(
+        "textDocument/diagnostic",
+        json!({ "textDocument": { "uri": "file:///diagnostic-range.ts" } }),
+    );
+    let items = diagnostics["result"]["items"].as_array().expect("items");
+    let unused = items
+        .iter()
+        .find(|d| {
+            d["code"].as_str() == Some("no-unused-vars")
+                && d["message"]
+                    .as_str()
+                    .is_some_and(|message| message.contains("'unused'"))
+        })
+        .expect("unused diagnostic");
+
+    assert_eq!(unused["range"]["start"]["line"].as_u64(), Some(2));
+    assert_eq!(unused["range"]["start"]["character"].as_u64(), Some(6));
+    assert_eq!(unused["range"]["end"]["line"].as_u64(), Some(2));
+    assert_eq!(unused["range"]["end"]["character"].as_u64(), Some(12));
 
     c.shutdown_and_exit();
 }
